@@ -1,7 +1,7 @@
 opencv-python
 numpy
 keras
-opencv-python-headless==4.8.0.76
+ opencv-python-headless
 
 streamlit
 Pillow
