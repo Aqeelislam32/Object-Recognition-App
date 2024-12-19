@@ -1,8 +1,7 @@
 opencv-python
 numpy
 keras
- opencv-python-headless
-
+opencv-python-headless
 streamlit
 Pillow
 tensorflow
