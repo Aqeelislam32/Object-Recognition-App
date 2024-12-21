@@ -3,6 +3,7 @@ import numpy as np
 from keras.models import load_model
 import streamlit as st
 from PIL import Image
+import uuid  # For generating unique IDs if needed
 
 # Load the model and labels
 model = load_model('keras_model.h5')  # Replace with the path to your model
@@ -20,22 +21,32 @@ if mode == "CCTV Feed":
     frame_window = st.image([])
 
     # Add a start/stop CCTV feed button
-    start_camera = st.checkbox("Start CCTV Feed")
+    start_camera = st.checkbox("Start CCTV Feed")  # Ensure this checkbox is created properly
 
     if start_camera:
-        # Assuming the CCTV feed is an RTSP stream or a local video file
-        cctv_url = st.text_input("Enter CCTV Stream URL", "rtsp://your_cctv_stream_url")  # Replace with actual CCTV stream URL
+        # Add an option for IP Webcam
+        camera_type = st.selectbox("Select Camera Type", ["IP Webcam", "Other Network Camera"])
+        
+        if camera_type == "IP Webcam":
+            st.info("Ensure IP Webcam app is running on your mobile and connected to the same Wi-Fi.")
+            cctv_url = st.text_input("Enter IP Webcam Stream URL", "http://192.168.1.101:8080/video")
+        else:
+            cctv_url = st.text_input("Enter CCTV Stream URL", "rtsp://your_cctv_stream_url")
+        
         camera = cv2.VideoCapture(cctv_url)
 
         if not camera.isOpened():
-            st.error("Unable to open CCTV feed. Please check the stream URL or connection.")
+            st.error("Unable to open the camera. Please check the URL or connection.")
         else:
             stop_camera = False  # Control variable for stopping the loop
+
+            # Generate a unique session key for this camera feed using uuid
+            session_key = f"stop_camera_{str(uuid.uuid4())}"
 
             while not stop_camera:
                 ret, frame = camera.read()
                 if not ret:
-                    st.error("Failed to capture image from CCTV feed.")
+                    st.error("Failed to capture image from the camera.")
                     break
 
                 # Resize and preprocess the frame for prediction
@@ -47,12 +58,11 @@ if mode == "CCTV Feed":
                 probabilities = model.predict(processed_frame)
                 predicted_label = labels[np.argmax(probabilities)].strip()
 
-                # Assuming the model also returns a prediction for amount paid and change
-                # Modify the model prediction logic based on your model's output format
+                # Assuming the model also predicts payment details
                 amount_paid = np.round(probabilities[0][0], 2)  # Modify as per your model
                 change_returned = np.round(probabilities[0][1], 2)  # Modify as per your model
 
-                # Display the live CCTV feed with prediction
+                # Annotate and display the live feed
                 annotated_frame = frame.copy()
                 cv2.putText(
                     annotated_frame,
@@ -65,8 +75,8 @@ if mode == "CCTV Feed":
                 )
                 frame_window.image(annotated_frame, channels="BGR", use_column_width=True)
 
-                # Stop CCTV session
-                stop_camera_button = st.button("Stop CCTV Feed", key="stop_cctv")
+                # Stop the camera feed
+                stop_camera_button = st.button("Stop Camera Feed", key=session_key)
                 if stop_camera_button:
                     stop_camera = True
 
